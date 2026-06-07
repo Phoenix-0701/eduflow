@@ -1,0 +1,7 @@
+import { IsNotEmpty, IsString } from 'class-validator';
+
+export class CreateClassDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Tên lớp không được để trống' })
+  name: string;
+}

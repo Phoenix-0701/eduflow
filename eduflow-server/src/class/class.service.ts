@@ -1,0 +1,208 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateClassDto } from './dto/create-class.dto';
+import { MemberStatus } from '@prisma/client';
+
+@Injectable()
+export class ClassService {
+  constructor(private prisma: PrismaService) {}
+
+  async createClass(teacherId: string, dto: CreateClassDto) {
+    return this.prisma.class.create({
+      data: {
+        name: dto.name,
+        teacherId: teacherId,
+      },
+    });
+  }
+
+  async getTeacherClasses(teacherId: string) {
+    return this.prisma.class.findMany({
+      where: {
+        teacherId: teacherId,
+        isDeleted: false, // Chỉ lấy các lớp chưa bị xóa
+      },
+      include: {
+        _count: {
+          select: { members: true, quizzes: true }, // Đếm số HS và số Quiz để trả về cho UI Card
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteClass(teacherId: string, classId: string) {
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    if (
+      !targetClass ||
+      targetClass.teacherId !== teacherId ||
+      targetClass.isDeleted
+    ) {
+      throw new NotFoundException('Không tìm thấy lớp học hợp lệ');
+    }
+
+    // Thực hiện Soft Delete
+    return this.prisma.class.update({
+      where: { id: classId },
+      data: { isDeleted: true },
+    });
+  }
+  async addStudentByEmail(teacherId: string, classId: string, email: string) {
+    // 1. Kiểm tra Lớp học hợp lệ
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    if (
+      !targetClass ||
+      targetClass.teacherId !== teacherId ||
+      targetClass.isDeleted
+    ) {
+      throw new NotFoundException('Không tìm thấy lớp học hợp lệ');
+    }
+
+    // 2. Tìm User theo email và phải là STUDENT
+    const student = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!student || student.role !== 'STUDENT') {
+      throw new NotFoundException('Không tìm thấy học sinh với email này');
+    }
+
+    // 3. Kiểm tra xem học sinh đã có trong lớp chưa
+    const existingMember = await this.prisma.classMember.findUnique({
+      where: {
+        classId_studentId: {
+          classId: classId,
+          studentId: student.id,
+        },
+      },
+    });
+
+    // 4. Xử lý các trạng thái
+    if (existingMember) {
+      if (existingMember.status === MemberStatus.ACTIVE) {
+        throw new BadRequestException('Học sinh này đã có trong lớp');
+      }
+
+      // Nếu trạng thái đang là PENDING (do học sinh tự xin vào) hoặc REJECTED, ta update lên ACTIVE
+      return this.prisma.classMember.update({
+        where: {
+          classId_studentId: { classId, studentId: student.id },
+        },
+        data: { status: MemberStatus.ACTIVE },
+        include: {
+          student: { select: { id: true, name: true, email: true } }, // Trả về thông tin cơ bản của HS
+        },
+      });
+    }
+
+    // 5. Nếu chưa từng tham gia, tạo mới với trạng thái ACTIVE
+    return this.prisma.classMember.create({
+      data: {
+        classId: classId,
+        studentId: student.id,
+        status: MemberStatus.ACTIVE,
+      },
+      include: {
+        student: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
+  async joinClass(studentId: string, classId: string) {
+    // 1. Kiểm tra xem lớp có tồn tại và đang hoạt động không
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId, isDeleted: false },
+    });
+
+    if (!targetClass) {
+      throw new NotFoundException('Lớp học không tồn tại hoặc đã bị xóa');
+    }
+
+    // 2. Kiểm tra trạng thái hiện tại của học sinh trong lớp
+    const existingMember = await this.prisma.classMember.findUnique({
+      where: {
+        classId_studentId: { classId, studentId },
+      },
+    });
+
+    if (existingMember) {
+      if (existingMember.status === MemberStatus.ACTIVE) {
+        throw new BadRequestException('Bạn đã là thành viên của lớp này rồi');
+      }
+      if (existingMember.status === MemberStatus.PENDING) {
+        throw new BadRequestException(
+          'Yêu cầu tham gia của bạn đang chờ giáo viên duyệt',
+        );
+      }
+
+      // Nếu trước đó bị REJECTED, cho phép gửi lại yêu cầu (chuyển về PENDING)
+      if (existingMember.status === MemberStatus.REJECTED) {
+        return this.prisma.classMember.update({
+          where: { classId_studentId: { classId, studentId } },
+          data: { status: MemberStatus.PENDING },
+        });
+      }
+    }
+
+    // 3. Tạo mới yêu cầu PENDING
+    return this.prisma.classMember.create({
+      data: {
+        classId,
+        studentId,
+        status: MemberStatus.PENDING,
+      },
+    });
+  }
+
+  // ---------------------------------------------------------
+  // [TEACHER] LUỒNG 2: Giáo viên duyệt/từ chối học sinh
+  // ---------------------------------------------------------
+  async updateMemberStatus(
+    teacherId: string,
+    classId: string,
+    studentId: string,
+    newStatus: MemberStatus,
+  ) {
+    // 1. Xác thực giáo viên có quyền quản lý lớp này không
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    if (!targetClass || targetClass.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác trên lớp học này',
+      );
+    }
+
+    // 2. Kiểm tra xem học sinh có đang gửi yêu cầu không
+    const member = await this.prisma.classMember.findUnique({
+      where: { classId_studentId: { classId, studentId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException(
+        'Không tìm thấy dữ liệu học sinh trong lớp này',
+      );
+    }
+
+    // 3. Cập nhật trạng thái (Duyệt thành ACTIVE hoặc Từ chối thành REJECTED)
+    return this.prisma.classMember.update({
+      where: { classId_studentId: { classId, studentId } },
+      data: { status: newStatus },
+      include: {
+        student: { select: { name: true, email: true } }, // Trả về kèm tên HS để FE dễ hiển thị
+      },
+    });
+  }
+}

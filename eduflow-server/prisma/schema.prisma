@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------- ENUMS ----------------
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum MemberStatus {
+  PENDING   // Chờ giáo viên duyệt
+  ACTIVE    // Đã được duyệt/thêm trực tiếp
+  REJECTED  // Bị từ chối
+}
+
+// ---------------- MODELS ----------------
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String         // Hash password (bcrypt)
+  name          String
+  role          Role
+
+  // Relations
+  taughtClasses Class[]        @relation("TeacherClasses")
+  enrollments   ClassMember[]
+  attempts      Attempt[]
+  drafts        DraftAttempt[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Class {
+  id            String         @id @default(uuid()) // ID này dùng để Student nhập vào Join Class
+  name          String
+  teacherId     String
+  isDeleted     Boolean        @default(false) // Phục vụ Soft Delete
+  
+  teacher       User           @relation("TeacherClasses", fields: [teacherId], references: [id])
+  members       ClassMember[]
+  quizzes       Quiz[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model ClassMember {
+  classId       String
+  studentId     String
+  status        MemberStatus   @default(PENDING)
+
+  class         Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student       User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  joinedAt      DateTime       @default(now())
+
+  // Composite Primary Key: Một học sinh chỉ tham gia 1 lớp 1 lần
+  @@id([classId, studentId]) 
+}
+
+model Quiz {
+  id            String         @id @default(uuid())
+  classId       String
+  title         String
+  duration      Int            // Đơn vị: Phút
+  deadline      DateTime
+  maxAttempt    Int            @default(1)
+  showPoint     Boolean        @default(false)
+  note          String?        @db.Text
+  isDeleted     Boolean        @default(false) // Phục vụ Soft Delete
+
+  class         Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  questions     Question[]
+  attempts      Attempt[]
+  drafts        DraftAttempt[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Question {
+  id            String         @id @default(uuid())
+  quizId        String
+  content       String         @db.Text
+  orderIndex    Int            // Lưu thứ tự câu hỏi để hiển thị không bị lộn xộn
+
+  quiz          Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options       Option[]
+  answers       AttemptDetail[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Option {
+  id            String         @id @default(uuid())
+  questionId    String
+  content       String         @db.Text
+  isCorrect     Boolean        @default(false)
+
+  question      Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers       AttemptDetail[]
+}
+
+model Attempt {
+  id            String         @id @default(uuid())
+  quizId        String
+  studentId     String
+  score         Float?         // Nullable: Lúc đang thi thì chưa có điểm. Submit xong mới tính.
+  
+  quiz          Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student       User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  details       AttemptDetail[]
+
+  startedAt     DateTime       @default(now())
+  submittedAt   DateTime?      // Nếu Null nghĩa là sinh viên bỏ dở hoặc chưa nộp chính thức
+}
+
+model AttemptDetail {
+  attemptId         String
+  questionId        String
+  selectedOptionId  String
+
+  attempt           Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question          Question @relation(fields: [questionId], references: [id])
+  selectedOption    Option   @relation(fields: [selectedOptionId], references: [id])
+
+  // Composite Key: Trong 1 lần nộp bài, 1 câu hỏi chỉ có 1 đáp án được chọn (vì là Single Choice)
+  @@id([attemptId, questionId]) 
+}
+
+model DraftAttempt {
+  id            String         @id @default(uuid())
+  quizId        String
+  studentId     String
+  savedState    Json           // Lưu dạng key-value: { "question_id_1": "option_id_A", "question_id_2": "option_id_B" }
+
+  quiz          Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student       User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  updatedAt     DateTime       @updatedAt
+
+  // Composite Unique: Mỗi sinh viên chỉ có tối đa 1 bản nháp đang active cho 1 bài Quiz
+  @@unique([quizId, studentId]) 
+}
