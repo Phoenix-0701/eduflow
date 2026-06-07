@@ -205,4 +205,92 @@ export class ClassService {
       },
     });
   }
+
+  async getStudentClasses(studentId: string) {
+    return this.prisma.classMember.findMany({
+      where: { studentId },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            teacher: { select: { name: true } }, // Lấy thêm tên giáo viên để hiển thị UI
+          },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+  }
+
+  async getClassMembers(teacherId: string, classId: string) {
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId, isDeleted: false },
+    });
+
+    if (!targetClass || targetClass.teacherId !== teacherId) {
+      throw new ForbiddenException('Bạn không có quyền truy cập');
+    }
+
+    return this.prisma.classMember.findMany({
+      where: { classId },
+      include: {
+        student: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+  }
+
+  // ---------------------------------------------------------
+  // [TEACHER] Đổi tên lớp học
+  // ---------------------------------------------------------
+  async updateClassName(teacherId: string, classId: string, newName: string) {
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    // Xác thực quyền sở hữu và lớp chưa bị xóa
+    if (
+      !targetClass ||
+      targetClass.teacherId !== teacherId ||
+      targetClass.isDeleted
+    ) {
+      throw new NotFoundException('Không tìm thấy lớp học hợp lệ');
+    }
+
+    return this.prisma.class.update({
+      where: { id: classId },
+      data: { name: newName },
+    });
+  }
+
+  // ---------------------------------------------------------
+  // [TEACHER] Xóa (kick) học sinh khỏi lớp
+  // ---------------------------------------------------------
+  async removeStudent(teacherId: string, classId: string, studentId: string) {
+    // 1. Xác thực quyền giáo viên đối với lớp này
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    if (!targetClass || targetClass.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác trên lớp học này',
+      );
+    }
+
+    // 2. Kiểm tra xem học sinh có nằm trong danh sách lớp không
+    const member = await this.prisma.classMember.findUnique({
+      where: { classId_studentId: { classId, studentId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Học sinh này không có trong danh sách lớp');
+    }
+
+    // 3. Xóa quyền truy cập (Xóa bản ghi trong bảng ClassMember)
+    // Dữ liệu làm bài (Attempt) của học sinh vẫn được giữ lại nhờ cấu trúc schema
+    return this.prisma.classMember.delete({
+      where: { classId_studentId: { classId, studentId } },
+    });
+  }
 }

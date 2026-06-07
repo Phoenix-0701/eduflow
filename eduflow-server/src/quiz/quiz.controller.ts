@@ -127,4 +127,16 @@ export class QuizController {
       result,
     };
   }
+
+  @Get(':id/report')
+  @Roles(Role.TEACHER)
+  async getQuizReport(@Request() req, @Param('id') quizId: string) {
+    const teacherId = req.user.id;
+    const result = await this.quizService.getQuizReport(teacherId, quizId);
+
+    return {
+      message: 'Tải báo cáo thống kê thành công',
+      result,
+    };
+  }
 }

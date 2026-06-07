@@ -18,6 +18,7 @@ import { Roles } from '../common/decorators/role.decorators';
 import { Role } from '@prisma/client';
 import { JoinClassDto } from './dto/join-class.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { UpdateClassDto } from './dto/update-class.dto';
 
 // Áp dụng Guard cho toàn bộ Controller này
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -103,6 +104,57 @@ export class ClassController {
     return {
       message: `Đã ${actionMessage} học sinh thành công`,
       result,
+    };
+  }
+
+  @Get('student/me')
+  @Roles(Role.STUDENT)
+  async getStudentClasses(@Request() req) {
+    const studentId = req.user.id;
+    return this.classService.getStudentClasses(studentId);
+  }
+
+  @Get(':id/members')
+  @Roles(Role.TEACHER)
+  async getClassMembers(@Request() req, @Param('id') classId: string) {
+    const teacherId = req.user.id;
+    return this.classService.getClassMembers(teacherId, classId);
+  }
+
+  // [TEACHER] - Đổi tên lớp
+  @Patch(':id')
+  @Roles(Role.TEACHER)
+  async updateClass(
+    @Request() req,
+    @Param('id') classId: string,
+    @Body() updateClassDto: UpdateClassDto,
+  ) {
+    const teacherId = req.user.id;
+    const result = await this.classService.updateClassName(
+      teacherId,
+      classId,
+      updateClassDto.name,
+    );
+
+    return {
+      message: 'Cập nhật tên lớp thành công',
+      result,
+    };
+  }
+
+  // [TEACHER] - Xóa (Kick) học sinh khỏi lớp
+  @Delete(':classId/members/:studentId')
+  @Roles(Role.TEACHER)
+  async removeStudent(
+    @Request() req,
+    @Param('classId') classId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    const teacherId = req.user.id;
+    await this.classService.removeStudent(teacherId, classId, studentId);
+
+    return {
+      message: 'Đã xóa học sinh khỏi lớp thành công',
     };
   }
 }
