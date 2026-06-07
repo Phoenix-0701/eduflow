@@ -36,14 +36,17 @@ export class GeminiService {
     const model = this.genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
       generationConfig: {
-        // TÍNH NĂNG "ĂN TIỀN": Ép AI chỉ được phép trả về định dạng JSON, không kèm text linh tinh (như ```json)
         responseMimeType: 'application/json',
       },
     });
 
     // 3. Xây dựng Prompt Engineering
     const prompt = `
-      Bạn là một chuyên gia giáo dục. Hãy đọc kỹ nội dung tài liệu dưới đây và tạo ra ${numQuestions} câu hỏi trắc nghiệm (Multiple Choice Questions) tập trung vào các kiến thức cốt lõi.
+      Bạn là một chuyên gia giáo dục. Hãy đọc kỹ toàn bộ nội dung tài liệu dưới đây.
+      
+      Nhiệm vụ của bạn:
+      - Nếu tài liệu là một bài lý thuyết, hãy tạo ra một bộ câu hỏi trắc nghiệm bao phủ TOÀN BỘ các kiến thức cốt lõi. (Tài liệu càng dài thì tạo càng nhiều câu hỏi).
+      - Nếu tài liệu đã chứa sẵn các bài tập trắc nghiệm, hãy trích xuất TOÀN BỘ các câu hỏi đó.
       
       Định dạng trả về BẮT BUỘC là một mảng JSON với cấu trúc chính xác như sau:
       [

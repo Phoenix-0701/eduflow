@@ -71,11 +71,9 @@ export class QuizController {
     }
 
     // Gọi Gemini Service xử lý Buffer của file
-    const numQuestions = 5; // Có thể lấy động từ @Body() nếu muốn
     const generatedQuestions =
       await this.geminiService.generateQuestionsFromPdf(
         file.buffer,
-        numQuestions,
       );
 
     return {
