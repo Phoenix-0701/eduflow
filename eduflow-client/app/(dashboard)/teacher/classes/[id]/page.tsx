@@ -32,11 +32,17 @@ export default function ClassDetailPage() {
       setLoadingQuizzes(true);
       try {
         const classRes = await classService.getClasses();
-        const currentClass = classRes.data.find((c: any) => c.id === classId);
+        // SỬA Ở ĐÂY: Fallback mảng an toàn
+        const classList = Array.isArray(classRes)
+          ? classRes
+          : classRes?.data || [];
+        const currentClass = classList.find((c: any) => c.id === classId);
         setClassDetail(currentClass);
 
         const quizRes = await quizService.getQuizzesByClass(classId);
-        setQuizzes(quizRes.data || []);
+        // SỬA Ở ĐÂY: Fallback mảng an toàn
+        const quizList = Array.isArray(quizRes) ? quizRes : quizRes?.data || [];
+        setQuizzes(quizList);
       } catch (error) {
         console.error("Lỗi tải dữ liệu lớp học:", error);
       } finally {

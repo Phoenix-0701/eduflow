@@ -51,4 +51,9 @@ export const classService = {
     );
     return res.data;
   },
+
+  getTeacherDashboard: async () => {
+    const res = await axiosInstance.get("/classes/teacher/dashboard");
+    return res.data;
+  },
 };

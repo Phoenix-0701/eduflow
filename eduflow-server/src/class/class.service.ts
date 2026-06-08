@@ -293,4 +293,62 @@ export class ClassService {
       where: { classId_studentId: { classId, studentId } },
     });
   }
+
+  // ---------------------------------------------------------
+  // [TEACHER] Lấy thống kê tổng quan cho Dashboard
+  // ---------------------------------------------------------
+  async getTeacherDashboard(teacherId: string) {
+    // 1. Tổng số lớp học
+    const totalClasses = await this.prisma.class.count({
+      where: { teacherId, isDeleted: false },
+    });
+
+    // 2. Tổng số học sinh duy nhất (không tính trùng)
+    const uniqueStudents = await this.prisma.classMember.findMany({
+      where: {
+        class: { teacherId, isDeleted: false },
+        status: 'ACTIVE',
+      },
+      distinct: ['studentId'],
+    });
+    const totalStudents = uniqueStudents.length;
+
+    // 3. Số bài test đang Active
+    const now = new Date();
+    const activeTests = await this.prisma.quiz.count({
+      where: {
+        class: { teacherId, isDeleted: false },
+        // ĐÃ XÓA isDeleted: false ở đây vì model Quiz không có cột này
+        OR: [{ deadline: { gt: now } }, { deadline: null }],
+      },
+    });
+
+    // 4. Danh sách 5 bài Test tạo gần đây nhất
+    const recentQuizzes = await this.prisma.quiz.findMany({
+      where: {
+        class: { teacherId, isDeleted: false },
+        // ĐÃ XÓA isDeleted: false ở đây
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        class: {
+          select: {
+            name: true,
+            _count: {
+              select: { members: { where: { status: 'ACTIVE' } } },
+            },
+          },
+        },
+        _count: { select: { attempts: true } },
+      },
+    });
+
+    return {
+      totalClasses,
+      totalStudents,
+      activeTests,
+      recentQuizzes,
+    };
+  }
 }

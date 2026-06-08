@@ -157,4 +157,16 @@ export class ClassController {
       message: 'Đã xóa học sinh khỏi lớp thành công',
     };
   }
+
+  // [TEACHER] - Thống kê Dashboard
+  @Get('teacher/dashboard')
+  @Roles(Role.TEACHER)
+  async getTeacherDashboard(@Request() req) {
+    const teacherId = req.user.id;
+    const result = await this.classService.getTeacherDashboard(teacherId);
+    return {
+      message: 'Lấy dữ liệu dashboard thành công',
+      data: result,
+    };
+  }
 }

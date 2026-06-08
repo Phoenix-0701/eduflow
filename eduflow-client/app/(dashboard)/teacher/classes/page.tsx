@@ -6,16 +6,18 @@ import ClassCard from "@/src/components/shared/ClassCard";
 import ClassCardSkeleton from "@/src/components/shared/ClassCardSkeleton";
 
 export default function ClassesPage() {
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState<any[]>([]); // Khởi tạo mảng rỗng
   const [loading, setLoading] = useState(true);
 
   const fetchClasses = async () => {
     setLoading(true);
     try {
       const data = await classService.getClasses();
-      setClasses(data.data);
+      // 🌟 SỬA LỖI TẠI ĐÂY: data trả về đã là mảng, ta fallback về [] nếu không có dữ liệu
+      setClasses(data || []);
     } catch (error) {
       console.error("Lỗi khi tải danh sách lớp", error);
+      setClasses([]); // Đảm bảo lỗi mạng cũng không sập trang
     } finally {
       setLoading(false);
     }
@@ -28,8 +30,12 @@ export default function ClassesPage() {
   const handleCreate = async () => {
     const name = prompt("Nhập tên lớp học mới:");
     if (name && name.trim() !== "") {
-      await classService.createClass(name);
-      fetchClasses(); // Tự động load lại danh sách sau khi tạo
+      try {
+        await classService.createClass(name);
+        fetchClasses(); // Tự động load lại danh sách sau khi tạo
+      } catch (error: any) {
+        alert(error.response?.data?.message || "Lỗi khi tạo lớp");
+      }
     }
   };
 
@@ -45,7 +51,7 @@ export default function ClassesPage() {
           <input
             type="text"
             placeholder="Search class names..."
-            className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-shadow"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-shadow placeholder:text-outline"
           />
         </div>
 
@@ -63,7 +69,7 @@ export default function ClassesPage() {
         {loading ? (
           // Hiển thị 6 cái Skeleton Card nhấp nháy trong lúc đợi API
           [1, 2, 3, 4, 5, 6].map((item) => <ClassCardSkeleton key={item} />)
-        ) : classes.length > 0 ? (
+        ) : classes && classes.length > 0 ? (
           // Render dữ liệu thật
           classes.map((cls: any) => (
             <ClassCard key={cls.id} cls={cls} onRefresh={fetchClasses} />
