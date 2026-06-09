@@ -26,4 +26,37 @@ export const quizService = {
     });
     return res.data; // Trả về mảng JSON câu hỏi từ Gemini
   },
+
+  getStudentDashboard: async () => {
+    const res = await axiosInstance.get("/quizzes/student/dashboard");
+    return res.data;
+  },
+
+  // [STUDENT] Lấy chi tiết bài kiểm tra trước khi làm
+  getQuizById: async (quizId: string) => {
+    const res = await axiosInstance.get(`/quizzes/${quizId}`);
+    return res.data;
+  },
+
+  // [STUDENT] Lưu bản nháp (Auto-save)
+  saveDraft: async (quizId: string, answers: Record<string, string>) => {
+    const res = await axiosInstance.post(`/quizzes/${quizId}/drafts`, {
+      answers,
+    });
+    return res.data;
+  },
+
+  // [STUDENT] Lấy bản nháp khi tải lại trang
+  getDraft: async (quizId: string) => {
+    const res = await axiosInstance.get(`/quizzes/${quizId}/drafts`);
+    return res.data;
+  },
+
+  // [STUDENT] Nộp bài chính thức
+  submitQuiz: async (quizId: string, answers: Record<string, string>) => {
+    const res = await axiosInstance.post(`/quizzes/${quizId}/submit`, {
+      answers,
+    });
+    return res.data;
+  },
 };

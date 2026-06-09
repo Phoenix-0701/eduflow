@@ -60,23 +60,48 @@ export class QuizService {
       },
     });
   }
-
-  // Lấy danh sách Quiz của một Lớp
-  async getQuizzesByClass(classId: string) {
-    return this.prisma.quiz.findMany({
-      where: { classId, isDeleted: false },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        duration: true,
-        deadline: true,
-        maxAttempt: true,
-        showPoint: true,
-        _count: {
-          select: { attempts: true }, // Đếm số học sinh đã làm
+  async getQuizByIdForStudent(studentId: string, quizId: string) {
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { id: quizId, isDeleted: false },
+      include: {
+        class: {
+          select: { id: true, name: true, teacher: { select: { name: true } } },
+        },
+        attempts: {
+          where: { studentId },
+          orderBy: { startedAt: 'asc' },
+        },
+        _count: { select: { questions: true } },
+        // 🌟 THÊM ĐOẠN NÀY ĐỂ LẤY CÂU HỎI VÀ ĐÁP ÁN (GIẤU isCorrect)
+        questions: {
+          orderBy: { orderIndex: 'asc' },
+          select: {
+            id: true,
+            content: true,
+            options: {
+              select: { id: true, content: true }, // Tuyệt đối không select isCorrect để HS không thể F12 gian lận
+            },
+          },
         },
       },
+    });
+  }
+
+  // Lấy danh sách Quiz của một Lớp
+  // Lấy danh sách Quiz của lớp
+  async getQuizzesByClass(classId: string, userId: string, role: string) {
+    return this.prisma.quiz.findMany({
+      where: { classId, isDeleted: false },
+      include: {
+        _count: { select: { questions: true } }, // Đếm tổng số câu hỏi
+        attempts:
+          role === 'STUDENT'
+            ? {
+                where: { studentId: userId }, // Chỉ lấy bài nộp của chính học sinh này
+              }
+            : false, // Nếu là giáo viên tạm thời không cần load attempts ở màn này
+      },
+      orderBy: { createdAt: 'asc' },
     });
   }
   // Thêm các hàm sau vào trong class QuizService

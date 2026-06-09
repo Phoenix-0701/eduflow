@@ -16,11 +16,22 @@ export default function Sidebar() {
   };
 
   // Danh sách menu
-  const menuItems = [
-    { name: "Dashboard", icon: "dashboard", path: "/teacher" },
-    { name: "Classes", icon: "school", path: "/teacher/classes" },
-    { name: "Settings", icon: "settings", path: "/teacher/settings" },
-  ];
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role || "STUDENT";
+
+  // Danh sách menu thay đổi theo Role
+  const menuItems =
+    role === "TEACHER"
+      ? [
+          { name: "Dashboard", icon: "dashboard", path: "/teacher" },
+          { name: "Classes", icon: "school", path: "/teacher/classes" },
+          { name: "Settings", icon: "settings", path: "/teacher/settings" },
+        ]
+      : [
+          { name: "Dashboard", icon: "dashboard", path: "/student" },
+          { name: "Classes", icon: "school", path: "/student/classes" },
+          { name: "Settings", icon: "settings", path: "/student/settings" },
+        ];
 
   return (
     <aside className="bg-surface-container-lowest dark:bg-inverse-surface fixed left-0 top-0 h-full w-[280px] border-r border-outline-variant shadow-sm dark:shadow-none hidden md:flex flex-col py-6 z-50">

@@ -30,6 +30,18 @@ export class QuizController {
     private readonly geminiService: GeminiService,
   ) {}
 
+  // [STUDENT] - Lấy dữ liệu Dashboard
+  @Get('student/dashboard')
+  @Roles(Role.STUDENT)
+  async getStudentDashboard(@Request() req) {
+    const studentId = req.user.id;
+    const result = await this.quizService.getStudentDashboard(studentId);
+    return {
+      message: 'Lấy dữ liệu dashboard học sinh thành công',
+      data: result,
+    };
+  }
+
   // [TEACHER] - Tạo bài kiểm tra mới
   @Post()
   @Roles(Role.TEACHER)
@@ -45,11 +57,10 @@ export class QuizController {
 
   // [TEACHER / STUDENT] - Lấy danh sách Quiz của 1 lớp
   @Get('class/:classId')
-  // Cả Teacher và Student đều có thể xem danh sách bài kiểm tra của lớp
-  async getQuizzesByClass(@Param('classId') classId: string) {
-    // Lưu ý nhỏ: Thực tế bạn nên check xem Student gọi API này có đang ACTIVE trong lớp này không.
-    // Tôi để mở tạm thời để bạn test dễ hơn.
-    return this.quizService.getQuizzesByClass(classId);
+  async getQuizzesByClass(@Request() req, @Param('classId') classId: string) {
+    const userId = req.user.id;
+    const role = req.user.role;
+    return this.quizService.getQuizzesByClass(classId, userId, role);
   }
 
   @Post('ai/generate')
@@ -72,9 +83,7 @@ export class QuizController {
 
     // Gọi Gemini Service xử lý Buffer của file
     const generatedQuestions =
-      await this.geminiService.generateQuestionsFromPdf(
-        file.buffer,
-      );
+      await this.geminiService.generateQuestionsFromPdf(file.buffer);
 
     return {
       message: 'AI đã trích xuất câu hỏi thành công',
@@ -135,6 +144,21 @@ export class QuizController {
     return {
       message: 'Tải báo cáo thống kê thành công',
       result,
+    };
+  }
+
+  // [STUDENT] - Xem chi tiết bài kiểm tra trước khi làm (Pre-test)
+  @Get(':id')
+  @Roles(Role.STUDENT)
+  async getQuizDetail(@Request() req, @Param('id') quizId: string) {
+    const studentId = req.user.id;
+    const result = await this.quizService.getQuizByIdForStudent(
+      studentId,
+      quizId,
+    );
+    return {
+      message: 'Lấy thông tin bài kiểm tra thành công',
+      data: result,
     };
   }
 }

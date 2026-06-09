@@ -313,13 +313,13 @@ export class ClassService {
     });
     const totalStudents = uniqueStudents.length;
 
-    // 3. Số bài test đang Active
+    // 3. Số bài test đang Active (Chỉ tìm các bài có deadline lớn hơn hiện tại)
     const now = new Date();
     const activeTests = await this.prisma.quiz.count({
       where: {
         class: { teacherId, isDeleted: false },
-        // ĐÃ XÓA isDeleted: false ở đây vì model Quiz không có cột này
-        OR: [{ deadline: { gt: now } }, { deadline: null }],
+        isDeleted: false,
+        deadline: { gt: now }, // 🌟 Sửa lỗi 500: Đã bỏ điều kiện deadline: null
       },
     });
 
@@ -327,7 +327,7 @@ export class ClassService {
     const recentQuizzes = await this.prisma.quiz.findMany({
       where: {
         class: { teacherId, isDeleted: false },
-        // ĐÃ XÓA isDeleted: false ở đây
+        isDeleted: false,
       },
       orderBy: { createdAt: 'desc' },
       take: 5,

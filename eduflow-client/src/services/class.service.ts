@@ -56,4 +56,16 @@ export const classService = {
     const res = await axiosInstance.get("/classes/teacher/dashboard");
     return res.data;
   },
+
+  // [STUDENT] Lấy danh sách lớp đã tham gia hoặc đang chờ duyệt
+  getStudentClasses: async () => {
+    const res = await axiosInstance.get("/classes/student/me");
+    return res.data;
+  },
+
+  // [STUDENT] Gửi yêu cầu tham gia lớp bằng Class ID
+  joinClass: async (classId: string) => {
+    const res = await axiosInstance.post("/classes/join", { classId });
+    return res.data;
+  },
 };
