@@ -87,7 +87,7 @@ export default function StudentClassesPage() {
 
       {loading ? (
         <div className="text-center py-12 text-on-surface-variant animate-pulse">
-          Đang tải danh sách lớp...
+          Loading class list...
         </div>
       ) : classes.length === 0 ? (
         <div className="text-center py-16 text-on-surface-variant bg-surface-container-lowest rounded-xl border border-outline-variant/50 shadow-sm">
@@ -95,9 +95,12 @@ export default function StudentClassesPage() {
             school
           </span>
           <h3 className="text-lg font-bold text-on-surface mb-2">
-            Bạn chưa tham gia lớp học nào
+            You haven't joined any class yet.
           </h3>
-          <p>Hãy nhấn nút "Join Class" và nhập mã do giáo viên cung cấp nhé.</p>
+          <p>
+            Please click the "Join Class" button and enter the code provided by
+            your teacher.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

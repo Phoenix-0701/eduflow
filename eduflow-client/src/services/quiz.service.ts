@@ -59,4 +59,9 @@ export const quizService = {
     });
     return res.data;
   },
+
+  getQuizReport: async (quizId: string) => {
+    const res = await axiosInstance.get(`/quizzes/${quizId}/report`);
+    return res.data;
+  },
 };

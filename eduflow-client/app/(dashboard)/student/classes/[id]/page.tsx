@@ -79,7 +79,8 @@ export default function StudentClassDetailPage() {
   if (!classDetail) {
     return (
       <div className="flex-1 p-8 text-center text-on-surface-variant">
-        Lớp học không tồn tại hoặc bạn chưa được duyệt vào lớp này.
+        The class does not exist or you have not been approved to join this
+        class.
       </div>
     );
   }
@@ -169,7 +170,7 @@ export default function StudentClassDetailPage() {
         <div className="md:col-span-8 flex flex-col gap-4">
           {quizzes.length === 0 ? (
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 text-center text-on-surface-variant">
-              Giáo viên chưa tạo bài kiểm tra nào cho lớp này.
+              The teacher has not created any quizzes for this class.
             </div>
           ) : (
             quizzes.map((quiz) => {

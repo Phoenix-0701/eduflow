@@ -196,7 +196,7 @@ export default function PreTestPage() {
               </div>
               <p className="text-[14px] text-on-surface-variant italic leading-relaxed whitespace-pre-line">
                 {quiz.note ||
-                  "Giáo viên không để lại lời nhắn nào cho bài kiểm tra này."}
+                  "The teacher has not left any notes for this quiz."}
               </p>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function PreTestPage() {
 
             {attemptsCount === 0 ? (
               <div className="text-center py-6 text-on-surface-variant bg-surface-container-lowest border border-outline-variant/50 rounded-lg border-dashed">
-                Bạn chưa làm bài kiểm tra này lần nào.
+                You haven't taken this test yet.
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-outline-variant">
@@ -283,7 +283,7 @@ export default function PreTestPage() {
             <p className="text-sm font-semibold text-on-surface-variant mb-4">
               {remainingAttempts > 0
                 ? `You have ${remainingAttempts} attempt(s) remaining. The highest score will be recorded.`
-                : "Bạn đã hết số lần làm bài cho phép."}
+                : "The deadline has passed or you have used all available attempts."}
             </p>
 
             {canTakeTest ? (
@@ -306,7 +306,7 @@ export default function PreTestPage() {
                 <span className="material-symbols-outlined text-[20px]">
                   lock
                 </span>
-                Đã hết hạn hoặc hết số lần làm bài
+                The deadline has passed or you have used all available attempts
               </button>
             )}
           </div>
