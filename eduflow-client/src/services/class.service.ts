@@ -24,10 +24,10 @@ export const classService = {
     const res = await axiosInstance.get(`/classes/${classId}/members`);
     return res.data;
   },
-  // Thêm học sinh vào lớp bằng Email (Giáo viên add thẳng)
+  // CẬP NHẬT LẠI HÀM NÀY TRONG eduflow-client/src/services/class.service.ts
   addStudent: async (classId: string, email: string) => {
-    const res = await axiosInstance.post("/classes/add-student", {
-      classId,
+    // Sửa đường dẫn thành /classes/:id/members
+    const res = await axiosInstance.post(`/classes/${classId}/members`, {
       email,
     });
     return res.data;

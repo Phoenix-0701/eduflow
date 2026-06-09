@@ -72,19 +72,34 @@ export class QuizService {
           orderBy: { startedAt: 'asc' },
         },
         _count: { select: { questions: true } },
-        // 🌟 THÊM ĐOẠN NÀY ĐỂ LẤY CÂU HỎI VÀ ĐÁP ÁN (GIẤU isCorrect)
         questions: {
           orderBy: { orderIndex: 'asc' },
           select: {
             id: true,
             content: true,
             options: {
-              select: { id: true, content: true }, // Tuyệt đối không select isCorrect để HS không thể F12 gian lận
+              select: { id: true, content: true },
             },
           },
         },
       },
     });
+
+    if (!quiz) {
+      throw new NotFoundException('Bài kiểm tra không tồn tại hoặc đã bị xóa');
+    }
+
+    const isMember = await this.prisma.classMember.findUnique({
+      where: { classId_studentId: { classId: quiz.classId, studentId } },
+    });
+
+    if (!isMember || isMember.status !== 'ACTIVE') {
+      throw new ForbiddenException(
+        'Bạn không có quyền truy cập bài kiểm tra này',
+      );
+    }
+
+    return quiz; // 🌟 HÔM TRƯỚC BẠN THIẾU DÒNG NÀY NÊN UI BỊ TRẮNG
   }
 
   // Lấy danh sách Quiz của một Lớp
@@ -317,7 +332,6 @@ export class QuizService {
     };
   }
   async getStudentDashboard(studentId: string) {
-    // 1. Tìm danh sách ID các lớp mà học sinh này đang học (trạng thái ACTIVE)
     const activeClasses = await this.prisma.classMember.findMany({
       where: { studentId, status: 'ACTIVE' },
       select: { classId: true },
@@ -326,14 +340,11 @@ export class QuizService {
 
     const now = new Date();
 
-    // 2. Lấy danh sách bài thi "Sắp tới" (Upcoming Quizzes)
-    // Điều kiện: Của lớp đang học + Chưa hết hạn + Học sinh CHƯA NỘP BÀI
     const upcomingQuizzes = await this.prisma.quiz.findMany({
       where: {
         classId: { in: classIds },
         isDeleted: false,
-        OR: [{ deadline: { gt: now } }, { deadline: null }],
-        // Không lấy các bài quiz mà học sinh này đã có attempt nộp bài
+        deadline: { gt: now }, // 🌟 ĐÃ XÓA { deadline: null } ĐỂ HẾT LỖI 500
         attempts: {
           none: {
             studentId: studentId,
@@ -344,11 +355,10 @@ export class QuizService {
       include: {
         class: { select: { name: true, teacher: { select: { name: true } } } },
       },
-      orderBy: { deadline: 'asc' }, // Sắp xếp cái nào sắp hết hạn lên đầu
+      orderBy: { deadline: 'asc' },
       take: 5,
     });
 
-    // 3. Lấy danh sách bài thi "Đã làm gần đây" (Recent Attempts)
     const recentAttempts = await this.prisma.attempt.findMany({
       where: {
         studentId: studentId,
@@ -366,6 +376,83 @@ export class QuizService {
     return {
       upcomingQuizzes,
       recentAttempts,
+    };
+  }
+  // [STUDENT] Lấy chi tiết bài làm (Review)
+  // [STUDENT] Lấy chi tiết bài làm (Review)
+  async getAttemptReview(studentId: string, quizId: string) {
+    const attempt = await this.prisma.attempt.findFirst({
+      where: { studentId, quizId },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        quiz: {
+          include: {
+            class: { select: { name: true } },
+            questions: {
+              orderBy: { orderIndex: 'asc' },
+              include: { options: true },
+            },
+          },
+        },
+        details: true,
+      },
+    });
+
+    if (!attempt) throw new NotFoundException('Không tìm thấy bài làm');
+
+    const quiz = attempt.quiz;
+    const isSubmitted = !!attempt.submittedAt;
+
+    const savedAnswers: Record<string, string> = {};
+
+    if (isSubmitted) {
+      attempt.details.forEach((detail) => {
+        savedAnswers[detail.questionId] = detail.selectedOptionId;
+      });
+    } else {
+      const draft = await this.prisma.draftAttempt.findUnique({
+        where: { quizId_studentId: { quizId, studentId } },
+      });
+      if (draft && draft.savedState) {
+        Object.assign(savedAnswers, draft.savedState);
+      }
+    }
+
+    const questionsWithReview = quiz.questions.map((q) => {
+      const selectedOptionId = savedAnswers[q.id];
+      const correctOption = q.options.find((o) => o.isCorrect);
+      const isCorrect = selectedOptionId === correctOption?.id;
+
+      return {
+        id: q.id,
+        content: q.content,
+        options: q.options.map((o) => ({
+          id: o.id,
+          content: o.content,
+          isCorrect: isSubmitted && quiz.showPoint ? o.isCorrect : undefined,
+        })),
+        studentAnswer: selectedOptionId,
+        isCorrect: isSubmitted && quiz.showPoint ? isCorrect : undefined,
+      };
+    });
+
+    let timeTaken = 0;
+    if (attempt.submittedAt) {
+      timeTaken = Math.floor(
+        (attempt.submittedAt.getTime() - attempt.startedAt.getTime()) / 1000,
+      );
+    }
+
+    return {
+      attemptId: attempt.id,
+      quizTitle: quiz.title,
+      className: quiz.class.name,
+      showPoint: quiz.showPoint,
+      isSubmitted,
+      score: attempt.score,
+      timeTaken: timeTaken,
+      submittedAt: attempt.submittedAt,
+      questions: questionsWithReview,
     };
   }
 }

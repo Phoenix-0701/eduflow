@@ -103,18 +103,6 @@ export class QuizController {
     return { message: 'Đã lưu nháp tự động' };
   }
 
-  // [STUDENT] - Lấy lại bản nháp (nếu có)
-  @Get(':id/drafts')
-  @Roles(Role.STUDENT)
-  async getDraft(@Request() req, @Param('id') quizId: string) {
-    const studentId = req.user.id;
-    const draft = await this.quizService.getDraftAttempt(studentId, quizId);
-    return {
-      message: draft ? 'Tải bản nháp thành công' : 'Không có bản nháp nào',
-      result: draft?.savedState || {},
-    };
-  }
-
   // [STUDENT] - Nộp bài chính thức
   @Post(':id/submit')
   @Roles(Role.STUDENT)
@@ -158,6 +146,18 @@ export class QuizController {
     );
     return {
       message: 'Lấy thông tin bài kiểm tra thành công',
+      data: result,
+    };
+  }
+
+  // [STUDENT] - Xem lại bài làm (Review) hoặc lấy bản nháp đang làm dở
+  @Get(':id/review')
+  @Roles(Role.STUDENT)
+  async getAttemptReview(@Request() req, @Param('id') quizId: string) {
+    const studentId = req.user.id;
+    const result = await this.quizService.getAttemptReview(studentId, quizId);
+    return {
+      message: 'Tải dữ liệu bài làm thành công',
       data: result,
     };
   }

@@ -1,54 +1,36 @@
-import {
-  Injectable,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-const pdfParse = require('pdf-parse');
 
 @Injectable()
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
 
   constructor() {
-    // Khởi tạo SDK với API Key từ file .env
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
 
   async generateQuestionsFromPdf(fileBuffer: Buffer, numQuestions: number = 5) {
-    // 1. Trích xuất Text từ file PDF
-    let pdfText = '';
-    try {
-      const pdfData = await pdfParse(fileBuffer);
-      pdfText = pdfData.text;
-    } catch (error) {
-      throw new BadRequestException(
-        'Không thể đọc file PDF. File có thể bị hỏng, có mật khẩu hoặc là dạng hình ảnh scan.',
-      );
-    }
-
-    if (!pdfText || pdfText.trim().length === 0) {
-      throw new BadRequestException('File PDF trống hoặc không chứa văn bản.');
-    }
-
-    // 2. Cấu hình Gemini Model
-    // Sử dụng gemini-1.5-flash vì nó cực kỳ nhanh, rẻ và hỗ trợ context window siêu lớn (đọc được file PDF hàng trăm trang)
+    // 1. Khởi tạo model chuẩn xác
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
+      model: 'gemini-3.5-flash',
     });
 
-    // 3. Xây dựng Prompt Engineering
+    const pdfPart = {
+      inlineData: {
+        data: fileBuffer.toString('base64'),
+        mimeType: 'application/pdf',
+      },
+    };
+
+    // 2. Prompt đã được tối ưu lại: Giới hạn đúng số câu để AI xử lý siêu tốc
     const prompt = `
-      Bạn là một chuyên gia giáo dục. Hãy đọc kỹ toàn bộ nội dung tài liệu dưới đây.
+      Bạn là một chuyên gia giáo dục. Hãy đọc kỹ nội dung tài liệu PDF đính kèm.
       
-      Nhiệm vụ của bạn:
-      - Nếu tài liệu là một bài lý thuyết, hãy tạo ra một bộ câu hỏi trắc nghiệm bao phủ TOÀN BỘ các kiến thức cốt lõi. (Tài liệu càng dài thì tạo càng nhiều câu hỏi).
-      - Nếu tài liệu đã chứa sẵn các bài tập trắc nghiệm, hãy trích xuất TOÀN BỘ các câu hỏi đó.
+      Nhiệm vụ: 
+      - Nếu tài liệu là một đề thi/bài tập, hãy trích xuất TOÀN BỘ các câu hỏi trắc nghiệm có trong đó. KHÔNG BỎ SÓT (ví dụ đề có 40 câu thì phải trích xuất đủ 40 câu).
+      - Nếu tài liệu là lý thuyết, hãy tạo ra 15 - 20 câu hỏi trắc nghiệm bao quát kiến thức.
       
-      Định dạng trả về BẮT BUỘC là một mảng JSON với cấu trúc chính xác như sau:
+      Định dạng BẮT BUỘC là một mảng JSON (không có thẻ markdown, không có giải thích) với cấu trúc chính xác như sau:
       [
         {
           "content": "Nội dung câu hỏi...",
@@ -61,28 +43,35 @@ export class GeminiService {
           ]
         }
       ]
-      
-      Tài liệu:
-      """
-      ${pdfText}
-      """
     `;
 
-    // 4. Gửi yêu cầu tới AI và Parse kết quả
     try {
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      console.log('🤖 Đang gửi file PDF sang Google Gemini...');
 
-      // Chuyển đổi text JSON từ AI thành Javascript Array
+      // 3. Gọi AI
+      const result = await model.generateContent([prompt, pdfPart]);
+
+      console.log('✅ Gemini đã xử lý xong! Đang phân tích kết quả...');
+      let responseText = result.response.text();
+
+      // "Tẩy rửa" mã markdown nếu có
+      responseText = responseText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // 4. Chuyển đổi thành Javascript Array
       const generatedQuestions = JSON.parse(responseText);
+
+      console.log(`🎉 Đã tạo thành công ${generatedQuestions.length} câu hỏi!`);
 
       return generatedQuestions;
     } catch (error) {
-      console.error('Gemini API Error:', error);
+      console.error('=== CHI TIẾT LỖI GEMINI ===');
+      console.error(error);
       throw new InternalServerErrorException(
         'Lỗi trong quá trình AI phân tích tài liệu và sinh câu hỏi.',
       );
     }
   }
-  // Thêm hàm này vào trong QuizService
 }

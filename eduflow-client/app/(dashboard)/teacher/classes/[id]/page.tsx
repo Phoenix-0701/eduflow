@@ -8,7 +8,7 @@ import { quizService } from "@/src/services/quiz.service";
 
 export default function ClassDetailPage() {
   const params = useParams<{ id: string }>();
-  const classId = params.id;
+  const classId = params.id as string;
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"QUIZZES" | "STUDENTS">("QUIZZES");
@@ -24,6 +24,28 @@ export default function ClassDetailPage() {
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [isAddingStudent, setIsAddingStudent] = useState(false);
 
+  // State cho Pop-up Thông báo (Toast)
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success",
+  ) => {
+    setToast({ show: true, message, type });
+    setTimeout(
+      () => setToast({ show: false, message: "", type: "success" }),
+      3000,
+    );
+  };
+
   // Load Dữ liệu ban đầu
   useEffect(() => {
     if (!classId) return;
@@ -32,7 +54,6 @@ export default function ClassDetailPage() {
       setLoadingQuizzes(true);
       try {
         const classRes = await classService.getClasses();
-        // SỬA Ở ĐÂY: Fallback mảng an toàn
         const classList = Array.isArray(classRes)
           ? classRes
           : classRes?.data || [];
@@ -40,7 +61,6 @@ export default function ClassDetailPage() {
         setClassDetail(currentClass);
 
         const quizRes = await quizService.getQuizzesByClass(classId);
-        // SỬA Ở ĐÂY: Fallback mảng an toàn
         const quizList = Array.isArray(quizRes) ? quizRes : quizRes?.data || [];
         setQuizzes(quizList);
       } catch (error) {
@@ -64,9 +84,12 @@ export default function ClassDetailPage() {
     setLoadingMembers(true);
     try {
       const res = await classService.getClassMembers(classId);
-      setMembers(res.data || []);
+      // 🌟 SỬA LỖI Ở ĐÂY: Fallback an toàn để luôn lấy đúng mảng dữ liệu
+      const memberList = Array.isArray(res) ? res : res?.data || [];
+      setMembers(memberList);
     } catch (error) {
       console.error("Lỗi tải danh sách học sinh:", error);
+      setMembers([]);
     } finally {
       setLoadingMembers(false);
     }
@@ -81,11 +104,15 @@ export default function ClassDetailPage() {
     setIsAddingStudent(true);
     try {
       await classService.addStudent(classId, newStudentEmail);
-      alert("Đã thêm học sinh thành công!");
+      // 🌟 SỬA LỖI UI: Dùng pop-up thay vì alert()
+      showToast("Đã thêm học sinh vào lớp thành công!", "success");
       setNewStudentEmail("");
       fetchMembers(); // Load lại danh sách
     } catch (error: any) {
-      alert(error.response?.data?.message || "Không thể thêm học sinh này.");
+      showToast(
+        error.response?.data?.message || "Không thể thêm học sinh này.",
+        "error",
+      );
     } finally {
       setIsAddingStudent(false);
     }
@@ -97,9 +124,13 @@ export default function ClassDetailPage() {
   ) => {
     try {
       await classService.updateMemberStatus(classId, studentId, status);
+      showToast(
+        `Đã ${status === "ACTIVE" ? "duyệt" : "từ chối"} học sinh!`,
+        "success",
+      );
       fetchMembers(); // Load lại danh sách
     } catch (error: any) {
-      alert("Có lỗi xảy ra khi cập nhật trạng thái.");
+      showToast("Có lỗi xảy ra khi cập nhật trạng thái.", "error");
     }
   };
 
@@ -107,9 +138,10 @@ export default function ClassDetailPage() {
     if (confirm("Bạn có chắc chắn muốn đuổi học sinh này khỏi lớp?")) {
       try {
         await classService.removeStudent(classId, studentId);
+        showToast("Đã xóa học sinh khỏi lớp.", "success");
         fetchMembers();
       } catch (error) {
-        alert("Lỗi khi xóa học sinh.");
+        showToast("Lỗi khi xóa học sinh.", "error");
       }
     }
   };
@@ -139,7 +171,19 @@ export default function ClassDetailPage() {
   const pendingMembers = members.filter((m) => m.status === "PENDING");
 
   return (
-    <div className="p-4 md:p-8 max-w-[1280px] mx-auto w-full flex-1 flex flex-col gap-6">
+    <div className="p-4 md:p-8 max-w-[1280px] mx-auto w-full flex-1 flex flex-col gap-6 relative">
+      {/* 🌟 GIAO DIỆN POP-UP TOAST THÔNG BÁO 🌟 */}
+      {toast.show && (
+        <div
+          className={`fixed bottom-8 right-8 z-[100] px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 animate-[fadeIn_0.3s_ease-out] text-white ${toast.type === "success" ? "bg-[#10B981]" : "bg-error"}`}
+        >
+          <span className="material-symbols-outlined text-[24px]">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="font-semibold text-sm">{toast.message}</span>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-outline-variant">
         <div>
@@ -288,11 +332,14 @@ export default function ClassDetailPage() {
                       <td className="p-4">{quiz.duration} mins</td>
                       <td className="p-4">{formatDate(quiz.deadline)}</td>
                       <td className="p-4 text-right">
-                        <button className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-container">
+                        <Link
+                          href={`/teacher/quizzes/${quiz.id}/report`}
+                          className="p-1.5 inline-block text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-container"
+                        >
                           <span className="material-symbols-outlined text-[20px]">
                             bar_chart
                           </span>
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   ))
@@ -346,7 +393,7 @@ export default function ClassDetailPage() {
             </form>
           </section>
 
-          {/* Pending Approvals (Chỉ hiện khi có học sinh đang chờ duyệt) */}
+          {/* Pending Approvals */}
           {pendingMembers.length > 0 && (
             <section className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
               <div className="p-4 border-b border-error/20 bg-error/5">
@@ -371,10 +418,10 @@ export default function ClassDetailPage() {
                         className="hover:bg-surface-container-lowest transition-colors"
                       >
                         <td className="px-6 py-4 font-semibold">
-                          {member.student.name}
+                          {member.student?.name || "Unknown"}
                         </td>
                         <td className="px-6 py-4 text-on-surface-variant">
-                          {member.student.email}
+                          {member.student?.email}
                         </td>
                         <td className="px-6 py-4 text-on-surface-variant">
                           {formatDate(member.joinedAt)}
@@ -453,7 +500,6 @@ export default function ClassDetailPage() {
                     </tr>
                   ) : (
                     activeMembers.map((member, idx) => {
-                      // Tạo màu ngẫu nhiên cho Avatar chữ cái dựa trên index
                       const colors = [
                         "bg-primary/10 text-primary",
                         "bg-secondary-container text-on-secondary-container",
@@ -471,14 +517,14 @@ export default function ClassDetailPage() {
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${avatarColor}`}
                             >
-                              {getInitials(member.student.name)}
+                              {getInitials(member.student?.name)}
                             </div>
                             <span className="font-semibold text-on-surface">
-                              {member.student.name}
+                              {member.student?.name || "Unknown"}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant">
-                            {member.student.email}
+                            {member.student?.email}
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant">
                             {formatDate(member.joinedAt)}

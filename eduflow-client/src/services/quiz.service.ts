@@ -64,4 +64,10 @@ export const quizService = {
     const res = await axiosInstance.get(`/quizzes/${quizId}/report`);
     return res.data;
   },
+
+  // [STUDENT] Lấy dữ liệu bài làm (để xem lại hoặc lấy nháp)
+  getReview: async (quizId: string) => {
+    const res = await axiosInstance.get(`/quizzes/${quizId}/review`);
+    return res.data; // TransformInterceptor bọc trong data
+  },
 };

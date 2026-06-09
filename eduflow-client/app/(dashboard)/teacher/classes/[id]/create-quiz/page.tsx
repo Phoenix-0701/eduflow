@@ -139,27 +139,50 @@ export default function CreateQuizPage() {
     try {
       setIsGenerating(true);
       setError("");
+
+      // Gọi API sang Backend
       const response = await quizService.generateQuestionsByAI(file);
-      const aiQuestions = response.data; // Mảng câu hỏi từ API NestJS
+
+      // 🌟 SỬA LỖI TẠI ĐÂY: Fallback mảng an toàn (Vì response đã là mảng rồi)
+      const aiQuestions = Array.isArray(response)
+        ? response
+        : response?.data || [];
+
+      if (!aiQuestions || aiQuestions.length === 0) {
+        throw new Error("AI không tìm thấy câu hỏi nào trong tài liệu này.");
+      }
 
       // Map dữ liệu AI trả về thành State của React
-      const mappedQuestions: Question[] = aiQuestions.map(
-        (aiQ: any, qIndex: number) => ({
-          id: `ai-q-${Date.now()}-${qIndex}`,
-          content: aiQ.content,
-          options: aiQ.options.map((aiOpt: any, oIndex: number) => ({
-            id: `ai-o-${Date.now()}-${qIndex}-${oIndex}`,
-            content: aiOpt.content,
-            isCorrect: aiOpt.isCorrect,
-          })),
-        }),
-      );
+      const mappedQuestions = aiQuestions.map((aiQ: any, qIndex: number) => ({
+        id: `ai-q-${Date.now()}-${qIndex}`,
+        content: aiQ.content,
+        options: aiQ.options.map((aiOpt: any, oIndex: number) => ({
+          id: `ai-o-${Date.now()}-${qIndex}-${oIndex}`,
+          content: aiOpt.content,
+          isCorrect: aiOpt.isCorrect,
+        })),
+      }));
 
       // Chèn thêm câu hỏi AI vào danh sách hiện tại
-      setQuestions([...questions, ...mappedQuestions]);
+      const isInitialEmpty =
+        questions.length === 1 &&
+        questions[0].content.trim() === "" &&
+        questions[0].options.every((opt: any) => opt.content.trim() === "");
+
+      if (isInitialEmpty) {
+        // Nếu chỉ có 1 câu và đang trống -> GHI ĐÈ toàn bộ bằng list của AI
+        setQuestions(mappedQuestions);
+      } else {
+        // Nếu giáo viên đã soạn sẵn vài câu -> NỐI TIẾP list của AI vào bên dưới
+        setQuestions([...questions, ...mappedQuestions]);
+      }
     } catch (err: any) {
+      console.error("LỖI FE:", err);
+      // Hiển thị lỗi chi tiết nếu có
       setError(
-        err.response?.data?.message || "Lỗi khi AI đọc file. Vui lòng thử lại.",
+        err.response?.data?.message ||
+          err.message ||
+          "Lỗi khi AI đọc file. Vui lòng thử lại.",
       );
     } finally {
       setIsGenerating(false);
