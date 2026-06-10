@@ -13,6 +13,11 @@ export default function TeacherClassesPage() {
   const [pendingMembers, setPendingMembers] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 🌟 MỚI: States cho Create Class Modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -61,6 +66,24 @@ export default function TeacherClassesPage() {
     }
   };
 
+  // 🌟 MỚI: Xử lý Tạo lớp học
+  const handleCreateClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClassName.trim()) return;
+
+    setIsCreating(true);
+    try {
+      await classService.createClass(newClassName);
+      setIsCreateModalOpen(false); // Đóng Modal
+      setNewClassName(""); // Reset input
+      fetchData(); // Tải lại danh sách lớp để hiện lớp mới
+    } catch (error) {
+      alert("Lỗi khi tạo lớp học. Vui lòng thử lại!");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <main className="flex-1 p-4 md:p-8 max-w-[1280px] mx-auto w-full transition-all duration-300">
       {/* Page Header */}
@@ -90,7 +113,11 @@ export default function TeacherClassesPage() {
             )}
           </button>
 
-          <button className="bg-primary text-white font-semibold text-[14px] px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap">
+          {/* 🌟 NÚT TẠO LỚP HỌC (Đã sửa để mở Modal) */}
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-primary text-white font-semibold text-[14px] px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap"
+          >
             <span className="material-symbols-outlined text-[18px]">add</span>{" "}
             Create Class
           </button>
@@ -126,7 +153,7 @@ export default function TeacherClassesPage() {
                   style={{ background: bgGradients[idx % bgGradients.length] }}
                 >
                   <div className="absolute inset-0 opacity-20 mix-blend-multiply bg-black"></div>
-                  <div className="absolute top-3 right-3 bg-white/20 text-white font-semibold text-[12px] px-2 py-1 rounded-md backdrop-blur-md border border-white/30 shadow-sm">
+                  <div className="absolute top-3 right-3 bg-white/20 text-white font-semibold text-[12px] px-2 py-1 rounded-md backdrop-blur-md">
                     Code: {cls.id.substring(0, 8).toUpperCase()}
                   </div>
                 </div>
@@ -160,6 +187,67 @@ export default function TeacherClassesPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* 🌟 MODAL TẠO LỚP HỌC MỚI */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center animate-[fadeIn_0.2s_ease-out]">
+          <div
+            className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"
+            onClick={() => setIsCreateModalOpen(false)}
+          ></div>
+          <div className="relative bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/50 w-full max-w-md mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[24px] font-bold text-on-surface">
+                Create New Class
+              </h3>
+              <button
+                className="text-on-surface-variant hover:bg-surface-container-low p-1 rounded-full transition-colors"
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateClass}>
+              <p className="text-[14px] text-on-surface-variant mb-6">
+                Enter a name for your new class. Students will need the Class
+                Code to join.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  Class Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newClassName}
+                  onChange={(e) => setNewClassName(e.target.value)}
+                  className="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-[16px] focus:ring-2 focus:ring-primary outline-none transition-shadow"
+                  placeholder="e.g., Advanced Mathematics 101"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="px-6 py-2 rounded-lg font-bold text-[14px] text-on-surface-variant hover:bg-surface-container-low"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="px-6 py-2 rounded-lg font-bold text-[14px] bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-70"
+                >
+                  {isCreating ? "Creating..." : "Create Class"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
