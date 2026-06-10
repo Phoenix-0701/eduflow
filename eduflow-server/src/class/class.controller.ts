@@ -169,4 +169,16 @@ export class ClassController {
       data: result,
     };
   }
+
+  // [TEACHER] Lấy danh sách học sinh đang chờ duyệt từ tất cả các lớp
+  @Get('teacher/pending-approvals')
+  @Roles(Role.TEACHER)
+  async getPendingApprovals(@Request() req) {
+    const teacherId = req.user.id;
+    const result = await this.classService.getPendingApprovals(teacherId);
+    return {
+      message: 'Lấy danh sách chờ duyệt thành công',
+      data: result,
+    };
+  }
 }

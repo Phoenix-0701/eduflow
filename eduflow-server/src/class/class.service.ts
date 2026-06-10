@@ -119,38 +119,45 @@ export class ClassService {
     });
   }
 
-  async joinClass(studentId: string, classId: string) {
-    // 1. Kiểm tra xem lớp có tồn tại và đang hoạt động không
-    const targetClass = await this.prisma.class.findUnique({
-      where: { id: classId, isDeleted: false },
+  async joinClass(studentId: string, classCode: string) {
+    // 1. Tìm lớp học dựa trên Mã rút gọn (8 ký tự đầu) - DÙNG findFirst và startsWith
+    const targetClass = await this.prisma.class.findFirst({
+      where: {
+        id: { startsWith: classCode.toLowerCase() },
+        isDeleted: false,
+      },
     });
 
     if (!targetClass) {
-      throw new NotFoundException('Lớp học không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException(
+        'Lớp học không tồn tại hoặc mã lớp không đúng',
+      );
     }
+
+    const actualClassId = targetClass.id;
 
     // 2. Kiểm tra trạng thái hiện tại của học sinh trong lớp
     const existingMember = await this.prisma.classMember.findUnique({
       where: {
-        classId_studentId: { classId, studentId },
+        classId_studentId: { classId: actualClassId, studentId },
       },
     });
 
     if (existingMember) {
-      if (existingMember.status === MemberStatus.ACTIVE) {
+      if (existingMember.status === 'ACTIVE') {
         throw new BadRequestException('Bạn đã là thành viên của lớp này rồi');
       }
-      if (existingMember.status === MemberStatus.PENDING) {
+      if (existingMember.status === 'PENDING') {
         throw new BadRequestException(
           'Yêu cầu tham gia của bạn đang chờ giáo viên duyệt',
         );
       }
 
       // Nếu trước đó bị REJECTED, cho phép gửi lại yêu cầu (chuyển về PENDING)
-      if (existingMember.status === MemberStatus.REJECTED) {
+      if (existingMember.status === 'REJECTED') {
         return this.prisma.classMember.update({
-          where: { classId_studentId: { classId, studentId } },
-          data: { status: MemberStatus.PENDING },
+          where: { classId_studentId: { classId: actualClassId, studentId } },
+          data: { status: 'PENDING' },
         });
       }
     }
@@ -158,9 +165,9 @@ export class ClassService {
     // 3. Tạo mới yêu cầu PENDING
     return this.prisma.classMember.create({
       data: {
-        classId,
+        classId: actualClassId,
         studentId,
-        status: MemberStatus.PENDING,
+        status: 'PENDING',
       },
     });
   }
@@ -350,5 +357,23 @@ export class ClassService {
       activeTests,
       recentQuizzes,
     };
+  }
+
+  // [TEACHER] Lấy danh sách học sinh đang chờ duyệt của TẤT CẢ các lớp
+  async getPendingApprovals(teacherId: string) {
+    return this.prisma.classMember.findMany({
+      where: {
+        status: 'PENDING',
+        class: {
+          teacherId: teacherId,
+          isDeleted: false,
+        },
+      },
+      include: {
+        student: { select: { id: true, name: true, email: true } },
+        class: { select: { id: true, name: true } },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
   }
 }

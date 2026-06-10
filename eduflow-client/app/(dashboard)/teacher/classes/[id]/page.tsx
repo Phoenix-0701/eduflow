@@ -187,10 +187,22 @@ export default function ClassDetailPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-outline-variant">
         <div>
-          <h2 className="text-[24px] md:text-[32px] font-bold text-on-surface tracking-tight">
+          <h2 className="text-[24px] md:text-[32px] font-bold text-on-surface tracking-tight flex items-center gap-3">
             {classDetail?.name || "Loading..."}
-            <span className="text-on-surface-variant font-normal text-lg ml-3">
-              #{classId?.substring(0, 8).toUpperCase()}
+            <span
+              className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-lg font-mono cursor-pointer hover:bg-primary/20 transition-colors flex items-center gap-2"
+              title="Copy Class Code"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  classId?.substring(0, 8).toUpperCase(),
+                );
+                showToast("Đã copy Mã Lớp Học!", "success");
+              }}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                content_copy
+              </span>
+              Code: {classId?.substring(0, 8).toUpperCase()}
             </span>
           </h2>
           <p className="text-on-surface-variant mt-1">

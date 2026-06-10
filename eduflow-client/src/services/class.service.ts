@@ -68,4 +68,10 @@ export const classService = {
     const res = await axiosInstance.post("/classes/join", { classId });
     return res.data;
   },
+
+  // [TEACHER] Lấy danh sách học sinh chờ duyệt từ tất cả các lớp
+  getPendingApprovals: async () => {
+    const res = await axiosInstance.get("/classes/teacher/pending-approvals");
+    return res.data;
+  },
 };
