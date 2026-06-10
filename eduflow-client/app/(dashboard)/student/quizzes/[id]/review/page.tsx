@@ -143,8 +143,8 @@ export default function QuizReviewPage() {
         {!showPoint && (
           <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant text-on-surface-variant text-[14px] flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">info</span>
-            Giáo viên đã ẩn kết quả chấm điểm. Dưới đây là các đáp án bạn đã
-            chọn.
+            The teacher has hidden the quiz results. Below are the answers you
+            selected.
           </div>
         )}
 

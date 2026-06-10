@@ -265,7 +265,7 @@ export default function CreateQuizPage() {
               <span>Create Test</span>
             </div>
             <h2 className="text-[32px] font-bold text-on-surface">
-              Tạo bài kiểm tra mới
+              Create a new test
             </h2>
           </div>
 
@@ -295,7 +295,7 @@ export default function CreateQuizPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className={inputClass}
-                    placeholder="VD: Kiểm tra 15 phút chương I"
+                    placeholder="E.g.: 15-minute test on Chapter I"
                     type="text"
                   />
                 </div>
@@ -372,7 +372,7 @@ export default function CreateQuizPage() {
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className={`${inputClass} h-24 resize-none`}
-                    placeholder="Nhập ghi chú hoặc quy chế thi..."
+                    placeholder="Enter notes or exam regulations..."
                   ></textarea>
                 </div>
               </div>
@@ -387,11 +387,11 @@ export default function CreateQuizPage() {
                     <span className="material-symbols-outlined text-primary">
                       auto_awesome
                     </span>{" "}
-                    Nhập liệu bằng AI
+                    Create questions with AI
                   </h3>
                   <p className="text-sm text-on-surface-variant mt-1">
-                    Tải lên file PDF, AI sẽ đọc tài liệu và tự động sinh ra các
-                    câu hỏi trắc nghiệm.
+                    Upload a PDF file, and AI will read the document and
+                    automatically generate multiple-choice questions.
                   </p>
                 </div>
                 <div className="p-6">
@@ -420,16 +420,16 @@ export default function CreateQuizPage() {
                     )}
                     <p className="text-sm font-semibold text-on-surface mb-1">
                       {isGenerating ? (
-                        "AI đang phân tích tài liệu..."
+                        "AI is analyzing the document..."
                       ) : (
                         <>
-                          Click để chọn file{" "}
+                          Click to select file{" "}
                           <span className="text-primary">.PDF</span>
                         </>
                       )}
                     </p>
                     <p className="text-[12px] text-on-surface-variant">
-                      Tối đa 5MB
+                      Maximum 5MB
                     </p>
                   </div>
                 </div>
@@ -483,7 +483,7 @@ export default function CreateQuizPage() {
                           updateQuestionContent(q.id, e.target.value)
                         }
                         className={`${inputClass} bg-surface-container-lowest h-20 resize-y`}
-                        placeholder="Nhập nội dung câu hỏi..."
+                        placeholder="Enter question content..."
                       ></textarea>
                     </div>
 
@@ -523,7 +523,7 @@ export default function CreateQuizPage() {
                                 )
                               }
                               className={`${inputClass} ${opt.isCorrect ? "border-primary bg-primary-container/5" : "bg-surface-container-lowest"}`}
-                              placeholder="Nội dung đáp án"
+                              placeholder="Enter option content"
                               type="text"
                             />
 

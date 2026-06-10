@@ -156,6 +156,28 @@ export default function ClassDetailPage() {
     });
   };
 
+  const getQuizStatus = (deadline: string) => {
+    if (!deadline)
+      return {
+        label: "Active",
+        style: "bg-[#10B981]/10 text-[#10B981]",
+        dot: "bg-[#10B981]",
+      };
+    const isEnded = new Date(deadline) < new Date();
+    if (isEnded) {
+      return {
+        label: "Completed",
+        style: "bg-surface-variant text-on-surface-variant",
+        dot: "bg-outline",
+      };
+    }
+    return {
+      label: "Active",
+      style: "bg-[#10B981]/10 text-[#10B981]",
+      dot: "bg-[#10B981]",
+    };
+  };
+
   const getInitials = (name: string) => {
     if (!name) return "S";
     return name
@@ -315,46 +337,61 @@ export default function ClassDetailPage() {
                     </td>
                   </tr>
                 ) : (
-                  quizzes.map((quiz) => (
-                    <tr
-                      key={quiz.id}
-                      className="hover:bg-surface-container-lowest transition-colors group"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-primary-container/10 flex items-center justify-center text-primary">
-                            <span className="material-symbols-outlined text-[18px]">
-                              calculate
-                            </span>
+                  quizzes.map((quiz) => {
+                    // 🌟 Tính toán status tự động cho từng bài quiz
+                    const status = getQuizStatus(quiz.deadline);
+
+                    return (
+                      <tr
+                        key={quiz.id}
+                        className="hover:bg-surface-container-lowest transition-colors group"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-primary-container/10 flex items-center justify-center text-primary">
+                              <span className="material-symbols-outlined text-[18px]">
+                                calculate
+                              </span>
+                            </div>
+                            <div>
+                              <Link
+                                href={`/teacher/quizzes/${quiz.id}/report`}
+                                className="font-semibold block hover:text-primary hover:underline transition-all"
+                              >
+                                {quiz.title}
+                              </Link>
+                              <p className="text-[12px] text-on-surface-variant">
+                                Attempts: {quiz._count?.attempts || 0}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold">{quiz.title}</p>
-                            <p className="text-[12px] text-on-surface-variant">
-                              Attempts: {quiz._count?.attempts || 0}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[12px] font-semibold bg-emerald-100 text-emerald-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>{" "}
-                          Active
-                        </span>
-                      </td>
-                      <td className="p-4">{quiz.duration} mins</td>
-                      <td className="p-4">{formatDate(quiz.deadline)}</td>
-                      <td className="p-4 text-right">
-                        <Link
-                          href={`/teacher/quizzes/${quiz.id}/report`}
-                          className="p-1.5 inline-block text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-container"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            bar_chart
+                        </td>
+                        <td className="p-4">
+                          {/* 🌟 Thay HTML cứng bằng biến status động */}
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-[12px] font-semibold ${status.style}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${status.dot}`}
+                            ></span>{" "}
+                            {status.label}
                           </span>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="p-4">{quiz.duration} mins</td>
+                        <td className="p-4">{formatDate(quiz.deadline)}</td>
+                        <td className="p-4 text-right">
+                          <Link
+                            href={`/teacher/quizzes/${quiz.id}/report`}
+                            className="p-1.5 inline-block text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-container"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">
+                              bar_chart
+                            </span>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

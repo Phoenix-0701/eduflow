@@ -104,17 +104,23 @@ export class QuizService {
 
   // Lấy danh sách Quiz của một Lớp
   // Lấy danh sách Quiz của lớp
+  // Lấy danh sách Quiz của lớp
   async getQuizzesByClass(classId: string, userId: string, role: string) {
     return this.prisma.quiz.findMany({
       where: { classId, isDeleted: false },
       include: {
-        _count: { select: { questions: true } }, // Đếm tổng số câu hỏi
+        _count: {
+          select: {
+            questions: true,
+            attempts: { where: { submittedAt: { not: null } } }, // 🌟 Thêm dòng này để đếm số bài ĐÃ NỘP
+          },
+        },
         attempts:
           role === 'STUDENT'
             ? {
-                where: { studentId: userId }, // Chỉ lấy bài nộp của chính học sinh này
+                where: { studentId: userId },
               }
-            : false, // Nếu là giáo viên tạm thời không cần load attempts ở màn này
+            : false,
       },
       orderBy: { createdAt: 'asc' },
     });

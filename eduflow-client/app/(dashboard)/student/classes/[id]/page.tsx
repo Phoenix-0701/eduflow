@@ -28,7 +28,7 @@ export default function StudentClassDetailPage() {
         const currentClass = classList.find((c: any) => c.classId === classId);
         setClassDetail(currentClass?.class);
 
-        // 2. Lấy danh sách bài Quiz (Đã bao gồm attempts nhờ API mới sửa)
+        // 2. Lấy danh sách bài Quiz
         const quizRes = await quizService.getQuizzesByClass(classId);
         const quizList = Array.isArray(quizRes) ? quizRes : quizRes?.data || [];
         setQuizzes(quizList);
@@ -42,10 +42,10 @@ export default function StudentClassDetailPage() {
     fetchData();
   }, [classId]);
 
-  // Tính toán tiến độ
+  // Tính toán tiến độ (Cập nhật logic quét toàn bộ các lần attempt)
   const totalQuizzes = quizzes.length;
   const completedQuizzes = quizzes.filter(
-    (q) => q.attempts && q.attempts.length > 0 && q.attempts[0].submittedAt,
+    (q) => q.attempts && q.attempts.some((a: any) => a.submittedAt),
   ).length;
   const progressPercent =
     totalQuizzes === 0
@@ -63,10 +63,6 @@ export default function StudentClassDetailPage() {
       minute: "2-digit",
     });
   };
-
-  // Helper sinh màu ngẫu nhiên cho cover lớp học
-  const getCoverColor = () =>
-    "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)";
 
   if (loading) {
     return (
@@ -174,8 +170,19 @@ export default function StudentClassDetailPage() {
             </div>
           ) : (
             quizzes.map((quiz) => {
-              const attempt = quiz.attempts?.[0];
-              const isCompleted = !!attempt?.submittedAt;
+              // Tìm các attempt đã nộp
+              const completedAttempts =
+                quiz.attempts?.filter((a: any) => a.submittedAt) || [];
+              const isCompleted = completedAttempts.length > 0;
+
+              // Nếu đã làm nhiều lần, tìm lần điểm cao nhất
+              const bestAttempt = isCompleted
+                ? completedAttempts.reduce(
+                    (max: any, a: any) => (a.score > max.score ? a : max),
+                    completedAttempts[0],
+                  )
+                : null;
+
               const isUrgent =
                 !isCompleted &&
                 quiz.deadline &&
@@ -183,9 +190,10 @@ export default function StudentClassDetailPage() {
                   24 * 60 * 60 * 1000;
 
               return (
-                <div
+                <Link
                   key={quiz.id}
-                  className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 hover:shadow-md transition-shadow duration-300 group flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  href={`/student/quizzes/${quiz.id}`}
+                  className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all duration-300 group flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer block"
                 >
                   <div className="flex items-start gap-4 flex-1">
                     <div
@@ -203,7 +211,7 @@ export default function StudentClassDetailPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-[18px] font-semibold text-on-surface mb-1 leading-tight">
+                      <h3 className="text-[18px] font-semibold text-on-surface mb-1 leading-tight group-hover:text-primary transition-colors">
                         {quiz.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-on-surface-variant">
@@ -212,15 +220,19 @@ export default function StudentClassDetailPage() {
                             <span className="flex items-center gap-1 font-medium text-secondary">
                               <span className="material-symbols-outlined text-[16px]">
                                 check_circle
-                              </span>{" "}
-                              Completed
+                              </span>
+                              Completed ({completedAttempts.length}/
+                              {quiz.maxAttempt || 1})
                             </span>
                             <span className="flex items-center gap-1 font-medium">
                               <span className="material-symbols-outlined text-[16px]">
                                 grade
-                              </span>{" "}
-                              Score:{" "}
-                              {attempt.score !== null ? attempt.score : "?"}/10
+                              </span>
+                              Best Score:{" "}
+                              {bestAttempt?.score !== null
+                                ? bestAttempt.score
+                                : "?"}
+                              /10
                             </span>
                           </>
                         ) : (
@@ -228,13 +240,13 @@ export default function StudentClassDetailPage() {
                             <span className="flex items-center gap-1">
                               <span className="material-symbols-outlined text-[16px]">
                                 schedule
-                              </span>{" "}
+                              </span>
                               {quiz.duration} Mins
                             </span>
                             <span className="flex items-center gap-1">
                               <span className="material-symbols-outlined text-[16px]">
                                 format_list_bulleted
-                              </span>{" "}
+                              </span>
                               {quiz._count?.questions || 0} Questions
                             </span>
                             <span
@@ -253,24 +265,13 @@ export default function StudentClassDetailPage() {
                     </div>
                   </div>
 
-                  <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
-                    {isCompleted ? (
-                      <Link
-                        href={`/student/quizzes/${attempt.quizId}/review`}
-                        className="inline-block border border-outline-variant bg-transparent text-primary font-semibold text-[14px] px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors"
-                      >
-                        View Results
-                      </Link>
-                    ) : (
-                      <Link
-                        href={"/student/quizzes/" + quiz.id}
-                        className="block text-center w-full md:w-auto px-6 py-2.5 bg-primary text-white font-semibold text-[14px] rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
-                      >
-                        Take Quiz
-                      </Link>
-                    )}
+                  {/* Icon điều hướng thay cho các nút rườm rà */}
+                  <div className="shrink-0 flex items-center justify-end text-outline-variant group-hover:text-primary transition-colors mt-2 md:mt-0 w-full md:w-auto">
+                    <span className="material-symbols-outlined text-[24px]">
+                      chevron_right
+                    </span>
                   </div>
-                </div>
+                </Link>
               );
             })
           )}

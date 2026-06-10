@@ -49,15 +49,13 @@ export default function QuizStatisticsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center animate-pulse">Đang tải thống kê...</div>
+      <div className="p-8 text-center animate-pulse">Loading statistics...</div>
     );
   }
 
   if (!report) {
     return (
-      <div className="p-8 text-center text-error">
-        Không thể tải dữ liệu bài kiểm tra.
-      </div>
+      <div className="p-8 text-center text-error">Cannot load quiz data.</div>
     );
   }
 

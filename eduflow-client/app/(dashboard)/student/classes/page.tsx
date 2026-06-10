@@ -118,7 +118,7 @@ export default function StudentClassesPage() {
 
       {loading ? (
         <div className="text-center py-12 text-on-surface-variant animate-pulse">
-          Đang tải danh sách lớp...
+          Loading class list...
         </div>
       ) : activeTab === "ACTIVE" ? (
         // HIỂN THỊ ACTIVE CLASSES
@@ -128,9 +128,9 @@ export default function StudentClassesPage() {
               school
             </span>
             <h3 className="text-lg font-bold text-on-surface mb-2">
-              Bạn chưa tham gia lớp học nào
+              You haven't joined any class yet.
             </h3>
-            <p>Hãy nhấn nút "Join a Class" và nhập mã để tham gia.</p>
+            <p>Click the "Join a Class" button and enter the code to join.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-[fadeIn_0.3s_ease-out]">
@@ -174,7 +174,7 @@ export default function StudentClassesPage() {
       ) : // HIỂN THỊ PENDING CLASSES
       pendingClasses.length === 0 ? (
         <div className="text-center py-16 text-on-surface-variant bg-surface-container-lowest rounded-xl border border-outline-variant/50 border-dashed">
-          Không có yêu cầu tham gia lớp nào đang chờ duyệt.
+          There are no pending enrollment requests for any class.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-[fadeIn_0.3s_ease-out]">
@@ -188,9 +188,7 @@ export default function StudentClassesPage() {
                   <span className="material-symbols-outlined text-[18px]">
                     {item.status === "REJECTED" ? "block" : "hourglass_empty"}
                   </span>
-                  {item.status === "REJECTED"
-                    ? "Bị từ chối"
-                    : "Pending Approval"}
+                  {item.status === "REJECTED" ? "Rejected" : "Pending Approval"}
                 </div>
               </div>
               <div className="p-6 flex flex-col flex-1">
