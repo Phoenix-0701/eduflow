@@ -255,9 +255,12 @@ export default function StudentClassDetailPage() {
 
                   <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
                     {isCompleted ? (
-                      <button className="w-full md:w-auto px-6 py-2.5 bg-transparent border border-outline text-on-surface font-semibold text-[14px] rounded-lg hover:bg-surface-container-high transition-colors">
-                        Review Results
-                      </button>
+                      <Link
+                        href={`/student/quizzes/${attempt.quizId}/review`}
+                        className="inline-block border border-outline-variant bg-transparent text-primary font-semibold text-[14px] px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors"
+                      >
+                        View Results
+                      </Link>
                     ) : (
                       <Link
                         href={"/student/quizzes/" + quiz.id}

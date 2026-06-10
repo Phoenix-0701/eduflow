@@ -53,16 +53,21 @@ export const quizService = {
   },
 
   // [STUDENT] Nộp bài chính thức
-  submitQuiz: async (quizId: string, answers: Record<string, string>) => {
+  submitQuiz: async (
+    quizId: string,
+    answers: Record<string, string>,
+    timeTaken: number,
+  ) => {
     const res = await axiosInstance.post(`/quizzes/${quizId}/submit`, {
       answers,
+      timeTaken,
     });
     return res.data;
   },
 
   getQuizReport: async (quizId: string) => {
     const res = await axiosInstance.get(`/quizzes/${quizId}/report`);
-    return res.data;
+    return res;
   },
 
   // [STUDENT] Lấy dữ liệu bài làm (để xem lại hoặc lấy nháp)

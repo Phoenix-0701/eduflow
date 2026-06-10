@@ -257,9 +257,12 @@ export default function PreTestPage() {
                           </td>
                           <td className="p-4 text-right">
                             {isSubmitted ? (
-                              <button className="px-4 py-1.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-[12px] hover:bg-surface-container-low transition-colors">
+                              <Link
+                                href={`/student/quizzes/${quiz.id}/review`}
+                                className="inline-block px-4 py-1.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-[12px] hover:bg-surface-container-low transition-colors"
+                              >
                                 Review
-                              </button>
+                              </Link>
                             ) : (
                               <Link
                                 href={`/student/quizzes/${quiz.id}/take`}

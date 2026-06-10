@@ -161,4 +161,16 @@ export class QuizController {
       data: result,
     };
   }
+
+  // [STUDENT] - Lấy lại bản nháp (nếu có)
+  @Get(':id/drafts')
+  @Roles(Role.STUDENT)
+  async getDraft(@Request() req, @Param('id') quizId: string) {
+    const studentId = req.user.id;
+    const draft = await this.quizService.getDraftAttempt(studentId, quizId);
+    return {
+      message: draft ? 'Tải bản nháp thành công' : 'Không có bản nháp nào',
+      result: draft?.savedState || {},
+    };
+  }
 }

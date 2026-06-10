@@ -200,9 +200,12 @@ export default function StudentDashboard() {
                         </span>
                       </span>
                     </div>
-                    <button className="border border-outline-variant bg-transparent text-primary font-semibold text-[14px] px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors">
+                    <Link
+                      href={`/student/quizzes/${attempt.quizId}/review`}
+                      className="inline-block border border-outline-variant bg-transparent text-primary font-semibold text-[14px] px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors"
+                    >
                       View Results
-                    </button>
+                    </Link>
                   </div>
                 </article>
               ))

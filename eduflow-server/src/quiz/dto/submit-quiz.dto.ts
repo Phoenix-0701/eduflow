@@ -1,8 +1,11 @@
-import { IsNotEmpty, IsObject } from 'class-validator';
+import { IsObject, IsOptional, IsNumber } from 'class-validator';
 
 export class SubmitQuizDto {
-  // Tương tự lưu nháp, khi nộp bài FE cũng gửi cục JSON chứa toàn bộ đáp án cuối cùng
   @IsObject()
-  @IsNotEmpty()
   answers: Record<string, string>;
+
+  // Thêm trường này để nhận số giây làm bài từ Frontend
+  @IsOptional()
+  @IsNumber()
+  timeTaken?: number;
 }

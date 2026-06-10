@@ -102,6 +102,7 @@ export default function TakeQuizPage() {
   };
 
   // 4. XỬ LÝ NỘP BÀI
+  // 4. XỬ LÝ NỘP BÀI
   const handleSubmit = async () => {
     if (
       !confirm(
@@ -112,12 +113,28 @@ export default function TakeQuizPage() {
 
     setIsSubmitting(true);
     try {
-      await quizService.submitQuiz(quizId, answers);
-      // Xóa timer trong localStorage
-      localStorage.removeItem(`quiz_${quizId}_endTime`);
+      // 🌟 TÍNH THỜI GIAN LÀM BÀI (BẰNG GIÂY)
+      let timeTaken = 0;
+      const storageKey = `quiz_${quizId}_endTime`;
+      const endTimeStr = localStorage.getItem(storageKey);
+
+      if (endTimeStr && quiz?.duration) {
+        const endTime = parseInt(endTimeStr);
+        const startTime = endTime - quiz.duration * 60 * 1000;
+        timeTaken = Math.floor((Date.now() - startTime) / 1000);
+
+        // Chốt chặn an toàn: Đảm bảo không bị số âm và không lố thời gian cho phép
+        if (timeTaken < 0) timeTaken = 0;
+        if (timeTaken > quiz.duration * 60) timeTaken = quiz.duration * 60;
+      }
+
+      // Truyền timeTaken lên server
+      await quizService.submitQuiz(quizId, answers, timeTaken);
+
+      // Xóa timer
+      localStorage.removeItem(storageKey);
       alert("Nộp bài thành công!");
-      // Quay về trang Pre-test để xem điểm
-      router.push(`/student/quizzes/${quizId}`);
+      router.push(`/student/quizzes/${quizId}/review`);
     } catch (error: any) {
       alert(error.response?.data?.message || "Có lỗi xảy ra khi nộp bài");
       setIsSubmitting(false);

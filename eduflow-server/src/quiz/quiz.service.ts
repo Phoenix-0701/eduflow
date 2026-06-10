@@ -204,6 +204,15 @@ export class QuizService {
     const roundedScore = Math.round(finalScore * 100) / 100;
 
     // 3. Sử dụng Prisma Transaction để Lưu bài làm chính thức & Xóa bản nháp
+    const submittedAt = new Date();
+    let startedAt = submittedAt;
+
+    // 🌟 SỬA TẠI ĐÂY: Lùi thời gian bắt đầu lại theo số giây Frontend gửi lên
+    if (dto.timeTaken) {
+      startedAt = new Date(submittedAt.getTime() - dto.timeTaken * 1000);
+    }
+
+    // 3. Sử dụng Prisma Transaction để Lưu bài làm chính thức & Xóa bản nháp
     const result = await this.prisma.$transaction(async (tx) => {
       // 3.1 Lưu Attempt (Kết quả tổng)
       const attempt = await tx.attempt.create({
@@ -211,8 +220,9 @@ export class QuizService {
           quizId,
           studentId,
           score: roundedScore,
-          submittedAt: new Date(),
-          // 3.2 Lưu chi tiết từng câu hỏi (Nested Create)
+          startedAt: startedAt, // <-- TRUYỀN startedAt VÀO ĐÂY
+          submittedAt: submittedAt,
+          // 3.2 Lưu chi tiết từng câu hỏi
           details: {
             create: attemptDetailsData,
           },
@@ -226,15 +236,6 @@ export class QuizService {
 
       return attempt;
     });
-
-    return {
-      score: result.score,
-      correctAnswers: correctCount,
-      totalQuestions: totalQuestions,
-      message: quiz.showPoint
-        ? `Bạn đã đạt ${result.score} điểm.`
-        : 'Đã nộp bài thành công. Giáo viên đã ẩn điểm số.',
-    };
   }
 
   // [TEACHER] Xem báo cáo thống kê của 1 bài kiểm tra
